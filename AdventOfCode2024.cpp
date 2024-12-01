@@ -4,5 +4,5 @@ import <print>;
 
 int main()
 {
-	std::print(day1());
+	std::print("{}", day1());
 }
