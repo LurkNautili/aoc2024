@@ -8,6 +8,7 @@ import <charconv>;
 import <algorithm>;
 import <tuple>;
 import <format>;
+import <unordered_map>;
 import inputReader;
 
 namespace rng = std::ranges;
@@ -38,12 +39,23 @@ export std::string day1() {
 	rng::sort(leftCol);
 	rng::sort(rightCol);
 
-	size_t sum{ 0 };
+	// Pt 1
+	size_t sum{ 0ULL };
 	for (auto pair : vws::zip(leftCol, rightCol)) {
 		size_t l = std::get<0>(pair);
 		size_t r = std::get<1>(pair);
 		sum += std::max(l, r) - std::min(l, r);
 	}
 
-	return std::format("Part 1) sum of distances is {} \n", sum);
+	// Pt 2
+	std::unordered_map<size_t, size_t> rightCounts;
+	for (const auto& r : rightCol) {
+		rightCounts[r]++;
+	}
+	size_t score{ 0ULL };
+	for (const auto& l : leftCol) {
+		score += l * rightCounts[l];
+	}
+
+	return std::format("Part 1) sum of distances is {}\n Part 2) similarity score is {}\n", sum, score);
 }
