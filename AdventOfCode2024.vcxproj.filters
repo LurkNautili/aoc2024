@@ -18,5 +18,19 @@
     <ClCompile Include="AdventOfCode2024.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="day1.ixx">
+      <Filter>Header Files</Filter>
+    </ClCompile>
+    <ClCompile Include="inputReader.ixx">
+      <Filter>Header Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="day1_input.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="day1_test_input.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
   </ItemGroup>
 </Project>
