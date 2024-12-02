@@ -136,6 +136,8 @@
     <ClCompile Include="AdventOfCode2024.cpp" />
     <ClCompile Include="day1.ixx" />
     <ClCompile Include="day2.ixx" />
+    <ClCompile Include="day3.ixx" />
+    <ClCompile Include="dayBase.ixx" />
     <ClCompile Include="inputReader.ixx" />
   </ItemGroup>
   <ItemGroup>
@@ -143,6 +145,8 @@
     <Text Include="day1_test_input.txt" />
     <Text Include="day2_input.txt" />
     <Text Include="day2_test_input.txt" />
+    <Text Include="day3_input.txt" />
+    <Text Include="day3_test_input.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
