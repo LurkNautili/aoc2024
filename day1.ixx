@@ -20,7 +20,7 @@ export std::string day1() {
 	//auto input = readFile("day1_test_input.txt");
 	auto input = readFile("day1_input.txt");
 
-	std::vector<std::string> lines = input | vws::split("\n"sv) | rng::to<std::vector<std::string>>();
+	//std::vector<std::string> lines = input | vws::split("\n"sv) | rng::to<std::vector<std::string>>();
 	auto lineViews = input | vws::split("\n"sv) | rng::to<std::vector>();
 
 	std::vector<size_t> leftCol;
