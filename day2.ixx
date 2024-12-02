@@ -106,8 +106,9 @@ export std::string day2() {
 	}
 
 	// Pt2
-	// brute force permutations of reports with an element missing
-	// (still trying to think of a cleverer way to do this, not sure if one exists)
+	// re-test failed reports using permutations with an element missing
+	// can shave off a couple of milliseconds by doing alterations mid-stream
+	// but it's not worth the loss in readability imo
 	size_t safeCount2{ 0 };
 	for (const auto& c : reports) {
 		auto safe = c.safe;
