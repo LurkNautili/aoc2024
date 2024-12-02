@@ -1,8 +1,8 @@
-import day1;
+import day2;
 import <iostream>;
 import <print>;
 
 int main()
 {
-	std::print("{}", day1());
+	std::print("{}", day2());
 }
