@@ -72,11 +72,18 @@ bool isSafe(const std::vector<int64_t>& report) {
 	return answer;
 }
 
+struct ReportCard {
+	std::vector<int64_t> report;
+	bool safe{ false };
+};
+
 export std::string day2() {
 	auto input = readFile("day2_input.txt");
 
 	auto lines = input | vws::split("\n"sv);
-	std::vector<bool> dbgSafeBits;
+
+	// Pt1
+	std::vector<ReportCard> reports;
 	size_t safeCount{ 0 };
 	for (auto l : lines) {
 		if (l.empty()) continue;
@@ -87,9 +94,31 @@ export std::string day2() {
 			std::from_chars(numStr.data(), numStr.data() + numStr.size(), report.back());
 		}
 		bool safe = isSafe(report);
-		dbgSafeBits.push_back(safe);
 		safeCount += safe ? 1 : 0;
+		reports.push_back(ReportCard{ report, safe });
 	}
 
-	return std::format("Part 1) number of safe reports is {}\n", safeCount);
+	// Pt2
+	// first, brute force
+	size_t safeCount2{ 0 };
+	for (const auto& c : reports) {
+		auto safe = c.safe;
+		if (safe) {
+			safeCount2++;
+			continue;
+		}
+		for (size_t i = 0; i < c.report.size(); ++i) {
+			// mask out ith element, test with rest
+			auto masked = c.report;
+			masked.erase(masked.begin() + i);
+			safe = isSafe(masked);
+			if (safe) {
+				safeCount2++;
+				break;
+			}
+		}
+	}
+
+	return std::format("Part 1) number of safe reports is {}\nPart 2) number of safe reports is {}\n",
+		safeCount, safeCount2);
 };
