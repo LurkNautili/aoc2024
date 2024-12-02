@@ -15,114 +15,147 @@ namespace vws = std::ranges::views;
 
 using namespace std::literals;
 
-enum class reportDelta {
-	UNSET,
-	POSITIVE,
-	NEGATIVE,
-	INVALID
-};
-
-reportDelta diffToDelta(int64_t diff) {
-	reportDelta dir{ reportDelta::INVALID };
-	if (diff == 0 || std::abs(diff) > 3) {
-		dir = reportDelta::INVALID;
-	}
-	else if (diff > 0) {
-		dir = reportDelta::POSITIVE;
-	}
-	else if (diff < 0) {
-		dir = reportDelta::NEGATIVE;
-	}
-	return dir;
+bool sameSign(int64_t a, int64_t b) {
+	// intentionally ignoring == 0 here since differences of 0 are invalid anyway
+	return a > 0 && b > 0 || a < 0 && b < 0;
 }
 
-bool isSafe(const std::vector<int64_t>& report, std::optional<size_t> ignoreIndex) {
-	if (report.empty()) {
-		return false;
-	}
-	bool safe{ true };
-	std::optional<int64_t> prev{};
-	reportDelta prevDelta{ reportDelta::UNSET };
-	for (size_t i = 0; i < report.size(); ++i) {
-		// optionally ignore exactly one entry in the report
-		if (ignoreIndex.has_value() && ignoreIndex.value() == i) {
-			continue;
+bool isSafe(const std::vector<int64_t>& report, bool useDampener = false) {
+	std::optional<int64_t> prevVal;
+	std::optional<int64_t> initDiff;
+	std::optional<size_t> dampenedIndex;
+	auto testValidity = [&initDiff](int64_t prev, int64_t curr) {
+		auto diff = curr - prev;
+		auto diffMag = std::abs(diff);
+		if (diffMag < 1 || diffMag > 3) {
+			return false;
 		}
-
-		int64_t curr = report[i];
-		if (!prev.has_value()) {
-			// skip first element, because we need two to start evaluating differences
-			prev = curr;
-			continue;
+		if (initDiff.has_value()) {
+			if (!sameSign(diff, initDiff.value())) {
+				return false;
+			}
+		}
+		return true;
+	};
+	auto testWithOmission = [&report, &testValidity, &initDiff](size_t ind) {
+		std::optional<size_t> dampIndex;
+		// special cases:
+		if (ind == 1 && report.size() >= 4) {
+			// the first pair is a freebie, any time we fail the first diff we can just omit report[0]
+			auto nextDiff = report[ind + 1] - report[ind];
+			auto nextNextDiff = report[ind + 2] - report[ind + 1];
+			if (sameSign(nextDiff, nextNextDiff)) {
+				dampIndex = 0;
+				// remember to reset initDiff since we've masked out the first element and thus initDiff is now invalid
+				initDiff.reset();
+			}
+		}
+		else if (ind == 2 && report.size() >= 4) {
+			auto diff = report[ind] - report[ind - 1];
+			auto nextDiff = report[ind + 1] - report[ind];
+			if (!sameSign(diff, initDiff.value()) && sameSign(diff, nextDiff)) {
+				// annoying edge case where prevDiff != diff and removing the first element at ind - 2 fixes it
+				dampIndex = 0;
+				initDiff.reset();
+			}
+		}
+		else if (ind == report.size() - 1) {
+			// similarly to the first case, if we've gotten to the end without spending the dampener,
+			// and we fail on the last diff, we can just discard the final element in the report
+			dampIndex = ind;
 		}
 		
-		// calculate difference, categorize as reportDelta based on requirements given in the assignment
-		auto diff = curr - prev.value();
-		prev = curr;
-		auto delta = diffToDelta(diff);
-		// break out early since any failed interval invalidates the whole report
-		if (delta == reportDelta::INVALID) {
-			safe = false;
-			break;
+		// normal cases, if we haven't found a valid omission yet: 
+		if (!dampIndex.has_value()) {
+			// test removing curr
+			if ((ind + 1) < report.size()
+				&& testValidity(report[ind - 1], report[ind + 1]))
+			{
+				dampIndex = ind;
+			}
+
+			// test removing prev (if the above case didn't work)
+			if (!dampIndex.has_value() && ind >= 2 && ind + 1 < report.size()
+				&& testValidity(report[ind - 2], report[ind])) 
+			{
+				auto diff1 = report[ind] - report[ind - 2];
+				auto diff2 = report[ind + 1] - report[ind];
+				if (sameSign(diff1, diff2)) {
+					dampIndex = ind - 1;
+					if (ind - 1 <= 1) {
+						// we've messed with one of the two elements constituting initDiff, so we reset it
+						initDiff.reset();
+					}
+				}
+			}
+		}
+		return dampIndex;
+	};
+	auto dampened = [&useDampener, &dampenedIndex, &testWithOmission](size_t testInd) {
+		if (!useDampener) {
+			return false;
+		}
+		if (dampenedIndex.has_value()) {
+			return false;
 		}
 
-		// keep track of delta in report, mark report as unsafe if delta changes
-		if (prevDelta == reportDelta::UNSET) {
-			prevDelta = delta;
+		auto res = testWithOmission(testInd);
+		if (res.has_value()) {
+			dampenedIndex = res.value();
+			return true;
 		}
-		else if (delta != prevDelta) {
-			safe = false;
-			break;
+	};
+	for (size_t i = 0; i < report.size(); ++i) {
+		auto val = report[i];
+		if (!prevVal.has_value()) {
+			// i = 0, init prevVal
+			prevVal = val;
+			continue;
+		}
+		else if (!initDiff.has_value()) {
+			// i = 1, init initDiff
+			auto diff = val - prevVal.value();
+			initDiff = diff;
+		}
+
+		auto prev = report[i - 1];
+		auto curr = report[i];
+		if (dampenedIndex.has_value() && dampenedIndex.value() == i - 1) {
+			prev = report[i - 2];
+		}
+
+		if (!testValidity(prev, curr) && !dampened(i)) {
+			goto fail; // remember that one? fun times
 		}
 	}
-	return safe;
+	return true;
+fail:
+	return false;
 }
-
-struct ReportCard {
-	std::vector<int64_t> report;
-	bool safe{ false };
-};
 
 export std::string day2() {
 	auto input = readFile("day2_input.txt");
 
 	auto lines = input | vws::split("\n"sv);
 
-	// Pt1
-	std::vector<ReportCard> reports;
 	size_t safeCount{ 0 };
+	size_t safeCount2{ 0 };
 	for (auto line : lines) {
 		if (line.empty()) continue;
-		reports.emplace_back();
-		auto& card = reports.back();
-		auto& report = card.report;
+		std::vector<int64_t> report;
 		for (auto piece : line | vws::split(" "sv)) {
 			auto numStr = piece | rng::to<std::string>();
 			report.emplace_back();
 			std::from_chars(numStr.data(), numStr.data() + numStr.size(), report.back());
 		}
-		card.safe = isSafe(report, {});
-		safeCount += card.safe ? 1 : 0;
-	}
-
-	// Pt2
-	// brute force permutations of reports with an element missing
-	// (still trying to think of a cleverer way to do this, not sure if one exists)
-	size_t safeCount2{ 0 };
-	for (const auto& c : reports) {
-		auto safe = c.safe;
-		if (safe) { // per the assignment, unsafe can become safe with the dampener but not vice versa
-			safeCount2++;
-			continue;
+		auto safe1 = isSafe(report);
+		safeCount += safe1;
+		if (safe1) {
+			safeCount2 += safe1;
 		}
-		// try masking out each individual element in the report one at a time and testing with the remainder
-		for (size_t i = 0; i < c.report.size(); ++i) {
-			safe = isSafe(c.report, i);
-			if (safe) {
-				safeCount2++;
-				break;
-				// early exit of course, since we only need to succeed with one for a damper to take effect
-			}
+		else {
+			auto safe2 = isSafe(report, true);
+			safeCount2 += safe2;
 		}
 	}
 
