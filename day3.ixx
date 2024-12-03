@@ -10,22 +10,47 @@ export std::string day3() {
 
 	//auto lines = input | vws::split("\n"sv);
 	std::string preamble{ "mul(" };
+	std::string doPattern{ "do()" };
+	std::string dontPattern{ "don't()" };
 	size_t prePos{ 0 };
 	std::string argA;
 	std::string argB;
 	std::string dbgHistory;
 	Stage stage{ Stage::PRE };
 	int64_t sum{ 0 };
+	bool multEnabled{ true };
 	for (const auto& c : input) {
 		auto dbgCnd = dbgHistory == "mul(561";
 		if (stage == Stage::PRE) {
-			if (c == preamble[prePos]) {
+			if (prePos < preamble.size() && c == preamble[prePos]) {
 				// continue matching more of preamble
 				dbgHistory += c;
 				prePos++;
-				if (prePos == 4) {
+				if (prePos == preamble.size()) {
 					stage = Stage::A;
 					prePos = 0;
+				}
+			}
+			else if (prePos < doPattern.size() && c == doPattern[prePos]) {
+				dbgHistory += c;
+				prePos++;
+				if (prePos == doPattern.size()) {
+					// enable mult and reset
+					dbgHistory = "";
+					prePos = 0;
+					std::cout << "Toggled mult ON\n";
+					multEnabled = true;
+				}
+			}
+			else if (prePos < dontPattern.size() && c == dontPattern[prePos]) {
+				dbgHistory += c;
+				prePos++;
+				if (prePos == dontPattern.size()) {
+					// disable mult and reset
+					dbgHistory = "";
+					prePos = 0;
+					std::cout << "Toggled mult OFF\n";
+					multEnabled = false;
 				}
 			}
 			else {
@@ -61,15 +86,17 @@ export std::string day3() {
 			else if (c == ')' && !argB.empty()) {
 				// done, record mult and reset
 				dbgHistory += c;
-				int64_t a;
-				int64_t b;
-				std::from_chars(argA.data(), argA.data() + argA.size(), a);
-				std::from_chars(argB.data(), argB.data() + argB.size(), b);
-				std::cout << dbgHistory << "\n";
+				if (multEnabled) {
+					int64_t a;
+					int64_t b;
+					std::from_chars(argA.data(), argA.data() + argA.size(), a);
+					std::from_chars(argB.data(), argB.data() + argB.size(), b);
+					sum += a * b;
+					std::cout << dbgHistory << "\n";
+				}
 				dbgHistory = "";
 				argA = "";
 				argB = "";
-				sum += a * b;
 				stage = Stage::PRE;
 			}
 			else {
