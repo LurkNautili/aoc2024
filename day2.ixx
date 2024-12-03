@@ -108,6 +108,7 @@ export std::string day2() {
 	// Pt2
 	// re-test failed reports using permutations with an element missing
 	// can shave off a couple of milliseconds by doing alterations mid-stream
+	// (in debug mode, that is, from ~48ms to ~45ms -- in release this runs in 1ms so who cares)
 	// but it's not worth the loss in readability imo
 	size_t safeCount2{ 0 };
 	for (const auto& c : reports) {
