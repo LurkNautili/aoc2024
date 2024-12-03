@@ -1,6 +1,4 @@
 export module day3;
-import <cctype>;
-import <cassert>;
 import dayBase;
 
 int64_t parseMult(std::string_view argStr) {
