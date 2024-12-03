@@ -19,7 +19,7 @@ int64_t parseMult(std::string_view argStr) {
 	return n * m;
 }
 
-void setCond(std::string_view input, size_t head, bool& cond) {
+bool getNearestConditional(std::string_view input, size_t head) {
 	static std::string doPattern{ "do()" };
 	static std::string dontPattern{ "don't()" };
 	auto doPos = input.rfind(doPattern, head); // reading backwards from head
@@ -27,13 +27,13 @@ void setCond(std::string_view input, size_t head, bool& cond) {
 	auto found = [](size_t p) { return p != std::string::npos; };
 	
 	if (found(doPos) && found(dontPos)) {
-		cond = doPos > dontPos ? true : false; // set based on which is closer to head, i.e. higher in position
+		return doPos > dontPos ? true : false; // set based on which is closer to head, i.e. higher in position
 	}
 	else if (found(doPos)) {
-		cond = true;
+		return true;
 	}
 	else if (found(dontPos)) {
-		cond = false;
+		return false;
 	}
 }
 
@@ -48,7 +48,7 @@ export std::string day3() {
 	bool cond{ true };
 
 	size_t head = input.find(mulPattern);
-	setCond(input, head, cond);
+	cond = getNearestConditional(input, head);
 
 	while (head != std::string::npos) {
 		head += mulPattern.size(); // in mult(ACB,DEF), read head now points at A
@@ -73,7 +73,7 @@ export std::string day3() {
 		// move read head to next instance of "mul("
 		head = input.find(mulPattern, head);
 		// set multiplication condition based on closest do/dont match
-		setCond(input, head, cond);
+		cond = getNearestConditional(input, head);
 	}
 
 	return std::format("Part 1) sum of all multiplications {}\nPart 2) sum of conditional multiplications {}\n",
