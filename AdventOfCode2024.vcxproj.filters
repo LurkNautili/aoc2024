@@ -33,10 +33,13 @@
     <ClCompile Include="day3.ixx">
       <Filter>Header Files</Filter>
     </ClCompile>
-    <ClCompile Include="day4.ixx">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="day5.ixx">
+      <Filter>Header Files</Filter>
+    </ClCompile>
+    <ClCompile Include="day6.ixx">
+      <Filter>Header Files</Filter>
+    </ClCompile>
+    <ClCompile Include="day4.ixx">
       <Filter>Header Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -69,6 +72,12 @@
       <Filter>Resource Files</Filter>
     </Text>
     <Text Include="day5_test_input.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="day6_test_input.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="day6_input.txt">
       <Filter>Resource Files</Filter>
     </Text>
   </ItemGroup>
