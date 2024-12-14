@@ -3,15 +3,8 @@ export module day5;
 import <format>;
 import <algorithm>;
 import <unordered_map>;
-import <print>;
+import <set>;
 import dayBase;
-
-struct Rule {
-    int lo;
-    int hi;
-
-    auto operator<=>(const Rule& other) const = default;
-};
 
 export std::string day5() {
     auto input = readFile("day5_input.txt");
@@ -20,7 +13,6 @@ export std::string day5() {
     auto ruleStr = (halves | vws::take(1)).front() | rng::to<std::string>();
     auto updateStr = (halves | vws::drop(1)).front() | rng::to<std::string>();
 
-    //std::unordered_map<int, std::vector<int>> followerMap;
     std::unordered_map<int, std::vector<int>> ruleMap;
 
     for (auto r : ruleStr | vws::split("\n"sv)) {
@@ -32,32 +24,8 @@ export std::string day5() {
         std::from_chars(left.data(), left.data() + left.size(), precedes);
         std::from_chars(right.data(), right.data() + right.size(), follows);
 
-        //auto& followers = followerMap[precedes];
-        //followers.push_back(follows);
         ruleMap[follows].push_back(precedes);
-        //if (precedes > follows) {
-        //    auto& exceptions = orderExceptions[precedes];
-        //    exceptions.push_back(follows);
-        //}
     }
-
-    //for (auto& f : followerMap) {
-    //    rng::sort(f.second);
-    //}
-
-    auto dbgPrint = [](auto vec, auto valid) {
-        if (valid) {
-            std::print("Passes: ", nullptr);
-        }
-        else {
-            std::print("Fails: ", nullptr);
-        }
-        //std::print("{}", vec);
-        for (const auto& el : vec) {
-            std::print("{}, ", el);
-        }
-        std::print("\n", nullptr);
-    };
 
     size_t sum{};
     size_t sum2{};
@@ -70,36 +38,33 @@ export std::string day5() {
             update.push_back(num);
         }
         if (update.size() % 2 == 0) {
-            continue; // no middle element
+            continue; // no middle element, can't sum anyway I guess
         }
-        // for every element in our update list, check if we're allowed to precede the rest of the list
-        for (auto pivot = update.begin(); pivot != update.end(); ++pivot) {
-            //auto& exceptions = orderExceptions[*pivot];
-            auto& pivotPredecessors = ruleMap[*pivot];
-            for (auto it = pivot; it != update.end(); ++it) {
-                // for all elements in the tail following our pivot, 
-                // make sure it's not in the pivot's precedent list
-                // if it is, fail the whole update
-                if (rng::contains(pivotPredecessors, *it)) {
-                    dbgPrint(update, false);
-                    goto fail; // remember when apple did an oopsie? fun times
-                }
+
+        bool valid{ true };
+        std::set<int> forbidden;
+        for (auto num : update) {
+            if (forbidden.contains(num)) {
+                valid = false;
+                break;
             }
+            auto f = ruleMap[num];
+            forbidden.insert_range(f);
         }
-        // update is valid, add the middle element to our sum
-        dbgPrint(update, true);
-        sum += update.at(update.size() / 2);
-        continue;
-    fail:
-        rng::sort(update, [&ruleMap](const auto& left, const auto& right) {
-            auto aPredecessors = ruleMap[left];
-            // B = [b1, b2, b3...] -> left; left < right := !B.contains(right)
-            return !rng::contains(aPredecessors, right);
-        });
-        std::print("After sorting: \n", nullptr);
-        dbgPrint(update, true);
-        sum2 += update.at(update.size() / 2);
-        continue;
+
+        if (valid) {
+            // update is valid, add the middle element to our sum
+            sum += update.at(update.size() / 2);
+        }
+        else {
+            // update violates a rule, sort update based on rules and add the middle element to the other sum
+            rng::sort(update, [&ruleMap](const auto& left, const auto& right) {
+                auto aPredecessors = ruleMap[left];
+                // B = [b1, b2, b3...] -> left; left < right := !B.contains(right)
+                return !rng::contains(aPredecessors, right);
+                });
+            sum2 += update.at(update.size() / 2);
+        }
     }
 
     return std::format("\nPart 1) sum of valid update middle elements: {}\
