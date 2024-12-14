@@ -60,6 +60,7 @@ export std::string day5() {
     };
 
     size_t sum{};
+    size_t sum2{};
 
     for (auto u : updateStr | vws::split("\n"sv)) {
         std::vector<int> update;
@@ -74,26 +75,35 @@ export std::string day5() {
         // for every element in our update list, check if we're allowed to precede the rest of the list
         for (auto pivot = update.begin(); pivot != update.end(); ++pivot) {
             //auto& exceptions = orderExceptions[*pivot];
-            auto& pivotMustNotPrecede = ruleMap[*pivot];
+            auto& pivotPredecessors = ruleMap[*pivot];
             for (auto it = pivot; it != update.end(); ++it) {
-                // if an element in the tail following our pivot is smaller than the pivot,
-                // make sure it's in the pivot's expection list
-                // if not, fail the whole update
-                if (rng::contains(pivotMustNotPrecede, *it)) {
+                // for all elements in the tail following our pivot, 
+                // make sure it's not in the pivot's precedent list
+                // if it is, fail the whole update
+                if (rng::contains(pivotPredecessors, *it)) {
                     dbgPrint(update, false);
                     goto fail; // remember when apple did an oopsie? fun times
-                }
-                else {
-                    int eresting{};
                 }
             }
         }
         // update is valid, add the middle element to our sum
         dbgPrint(update, true);
         sum += update.at(update.size() / 2);
+        continue;
     fail:
+        rng::sort(update, [&ruleMap](const auto& left, const auto& right) {
+            auto aPredecessors = ruleMap[left];
+            // B = [b1, b2, b3...] -> left; left < right := !B.contains(right)
+            return !rng::contains(aPredecessors, right);
+        });
+        std::print("After sorting: \n", nullptr);
+        dbgPrint(update, true);
+        sum2 += update.at(update.size() / 2);
         continue;
     }
 
-    return std::format("Part 1) sum of valid update middle elements: {}\n", sum);
+    return std::format("\nPart 1) sum of valid update middle elements: {}\
+                        \nPart 2) sum of fixed middle elements: {}\n",
+                        sum, sum2
+    );
 }
