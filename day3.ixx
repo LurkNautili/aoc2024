@@ -35,6 +35,7 @@ bool getNearestConditional(std::string_view input, size_t head) {
 	else if (found(dontPos)) {
 		return false;
 	}
+	return true;
 }
 
 export std::string day3() {
