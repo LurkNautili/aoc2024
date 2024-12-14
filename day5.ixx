@@ -13,22 +13,26 @@ export std::string day5() {
     auto ruleStr = (halves | vws::take(1)).front() | rng::to<std::string>();
     auto updateStr = (halves | vws::drop(1)).front() | rng::to<std::string>();
 
-    std::unordered_map<int, std::vector<int>> ruleMap;
+    std::unordered_map<int, std::vector<int>> leadersOf;
 
     for (auto r : ruleStr | vws::split("\n"sv)) {
         auto parts = r | vws::split("|"sv);
+        // parts: left|right
         auto left = (parts | vws::take(1)).front();
         auto right = (parts | vws::drop(1)).front();
-        int precedes;
-        int follows;
-        std::from_chars(left.data(), left.data() + left.size(), precedes);
-        std::from_chars(right.data(), right.data() + right.size(), follows);
+        // left -> right, right must follow left, left must precede right
+        int leader;
+        int follower;
+        std::from_chars(left.data(), left.data() + left.size(), leader);
+        std::from_chars(right.data(), right.data() + right.size(), follower);
 
-        ruleMap[follows].push_back(precedes);
+        // collect list of elements that must precede a given number
+        leadersOf[follower].push_back(leader);
+        // now leadersOf[follower] is a vector of numbers that cannot come after follower
     }
 
-    size_t sum{};
-    size_t sum2{};
+    size_t sumPt1{};
+    size_t sumPt2{};
 
     for (auto u : updateStr | vws::split("\n"sv)) {
         std::vector<int> update;
@@ -48,27 +52,28 @@ export std::string day5() {
                 valid = false;
                 break;
             }
-            auto f = ruleMap[num];
-            forbidden.insert_range(f);
+            // grab all the numbers that the rules say must precede num
+            // forbid them from the rest of the update since they cannot follow num without violating rules
+            forbidden.insert_range(leadersOf[num]);
         }
 
         if (valid) {
             // update is valid, add the middle element to our sum
-            sum += update.at(update.size() / 2);
+            sumPt1 += update.at(update.size() / 2);
         }
         else {
             // update violates a rule, sort update based on rules and add the middle element to the other sum
-            rng::sort(update, [&ruleMap](const auto& left, const auto& right) {
-                auto aPredecessors = ruleMap[left];
+            rng::sort(update, [&leadersOf](const auto& left, const auto& right) {
+                auto aPredecessors = leadersOf[left];
                 // B = [b1, b2, b3...] -> left; left < right := !B.contains(right)
                 return !rng::contains(aPredecessors, right);
                 });
-            sum2 += update.at(update.size() / 2);
+            sumPt2 += update.at(update.size() / 2);
         }
     }
 
     return std::format("\nPart 1) sum of valid update middle elements: {}\
                         \nPart 2) sum of fixed middle elements: {}\n",
-                        sum, sum2
+                        sumPt1, sumPt2
     );
 }
