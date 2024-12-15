@@ -2,9 +2,9 @@ export module day6;
 import dayBase;
 import <format>;
 import <mdspan>;
-import <set>;
-import <numeric>;
 import <print>;
+import <algorithm>;
+import <set>;
 
 enum class Dir {
     UP,
@@ -13,117 +13,171 @@ enum class Dir {
     LEFT
 };
 
-class World {
+Dir rotateClockwise(Dir dir) {
+    return static_cast<Dir>((static_cast<int>(dir) + 1) % 4);
+}
+
+struct Point {
+    size_t x;
+    size_t y;
+
+    auto operator<=>(const Point& o) const = default;
+};
+
+class World;
+class Walker {
 public:
-    World(std::string& str, size_t width, size_t height) 
-        : M_(std::mdspan(str.data(), height, width)), inputPtr_(&str)
-    {
-        std::tie(x_, y_) = getStartPos();
-        M_[std::array{ y_, x_ }] = 'X';
-        visited_.insert(flattenIndex(x_, y_));
-    }
-
+    Walker(size_t x, size_t y, Dir dir, World* World);
+    bool step();
+    bool wallAhead(Dir dir);
+    std::set<Point> path;
+    bool looped{ false };
 private:
-    std::pair<size_t, size_t> getStartPos() {
-        size_t pos = inputPtr_->find('^');
-        size_t W = M_.extents().extent(0);
-        size_t x = pos % W; // calling cols X, rows Y
-        size_t y = pos / W; // i.e. X horizontal, Y vertical
-        return { x, y };
-    }
+    std::pair<int, int> unpackDir(Dir dir);
+    char dirToChar(Dir dir);
+    size_t hash(size_t x, size_t y, Dir dir);
 
-    size_t walkAndReturnCount() {
-        while (!step()) {}
-        return visited_.size();
-    }
-
-    bool step() {
-        auto [dx, dy] = unpackDir(currDir_);
-        if (escapesBounds(0, x_, dx) || escapesBounds(1, y_, dy)) {
-            // done
-            return true;
-        }
-
-        size_t nextX = x_ + dx;
-        size_t nextY = y_ + dy;
-        auto test = M_[std::array{ nextY, nextX }];
-        if (M_[std::array{ nextY, nextX }] == '#') {
-            // obstructed, turn right
-            currDir_ = rotate(currDir_);
-        }
-        else {
-            // unobstructed, update position, record visit
-            x_ = nextX;
-            y_ = nextY;
-            M_[std::array{ nextY, nextX }] = 'X';
-            visited_.insert(flattenIndex(x_, y_));
-        }
-        //std::print("Visiting ({}, {})\n", x_, y_);
-        return false;
-    }
-
-    Dir rotate(Dir dir) {
-        return static_cast<Dir>((static_cast<int>(dir) + 1) % 4);
-    }
-
-    bool escapesBounds(size_t dim, size_t pos, int diff) {
-        auto max = M_.extents().extent(dim) - 1;
-        if (diff == 1 && pos == max) return true;
-        else if (diff == -1 && pos == 0) return true;
-        return false;
-    }
-
-    std::pair<int, int> unpackDir(Dir dir) {
-        if (dir == Dir::UP) return { 0, -1 };
-        if (dir == Dir::DOWN) return { 0, 1 };
-        if (dir == Dir::LEFT) return { -1, 0 };
-        if (dir == Dir::RIGHT) return { 1, 0 };
-        else throw std::runtime_error{"Illegal Dir enum member encountered"};
-    }
-
-    size_t flattenIndex(size_t x, size_t y) {
-        return M_.mapping()(x, y);
-    }
-
-    std::string toString() {
-        std::string str;
-        size_t W = M_.extents().extent(0);
-        size_t H = M_.extents().extent(1);
-        bool first{ true };
-        for (size_t i = 0; i < H; ++i) {
-            if (first) {
-                first = false;
-            }
-            else {
-                str += '\n';
-            }
-            for (size_t j = 0; j < W; ++j) {
-                str += M_[std::array{ i, j }];
-            }
-        }
-        return str;
-    }
-
-    size_t doubleCheck() {
-        size_t count{};
-        auto s = toString();
-        for (auto c : s) {
-            if (c == 'X') {
-                count++;
-            }
-        }
-        return count;
-    }
-
-    std::mdspan<char, std::dextents<size_t, 2>> M_;
-    const std::string* inputPtr_;
-    std::set<size_t> visited_;
     size_t x_;
     size_t y_;
-    Dir currDir_{ Dir::UP };
-
-    friend std::string day6();
+    Dir dir_;
+    World* world_;
+    std::set<size_t> tail_;
 };
+
+class World {
+public:
+    World(std::string str, size_t width, size_t height);
+    char getChar(size_t x, size_t y);
+    void setChar(size_t x, size_t y, char c);
+    std::pair<size_t, size_t> getSolution();
+    size_t width;
+    size_t height;
+private:
+    std::pair<size_t, size_t> getStartPos();
+    void walkGuardPath();
+    size_t getGuardPathLength();
+
+    std::string data_;
+    std::mdspan<char, std::dextents<size_t, 2>> M_;
+    Walker walker_{ 0, 0, Dir::UP, this };
+};
+
+
+
+Walker::Walker(size_t x, size_t y, Dir dir, World* world) 
+    : x_(x), y_(y), dir_(dir), world_(world) {}
+
+bool Walker::step() {
+    if (wallAhead(dir_)) {
+        // done
+        return true;
+    }
+
+    auto [dx, dy] = unpackDir(dir_);
+    size_t nextX = x_ + dx;
+    size_t nextY = y_ + dy;
+    if (world_->getChar(nextX, nextY) == '#') {
+        // obstructed, turn right
+        dir_ = rotateClockwise(dir_);
+        world_->setChar(x_, y_, dirToChar(dir_));
+    }
+    else {
+        // unobstructed, update position, record visit
+        world_->setChar(nextX, nextY, dirToChar(dir_));
+        path.insert(Point{ nextX, nextY });
+        x_ = nextX;
+        y_ = nextY;
+    }
+    auto h = hash(x_, y_, dir_);
+    if (tail_.contains(h)) {
+        // looping detected
+        looped = true;
+        return true;
+    }
+    tail_.insert(h);
+    return false;
+}
+
+bool Walker::wallAhead(Dir dir) {
+    if (dir == Dir::UP) return y_ == 0;
+    if (dir == Dir::DOWN) return y_ == world_->height - 1;
+    if (dir == Dir::LEFT) return x_ == 0;
+    if (dir == Dir::RIGHT) return x_ == world_->width - 1;
+    throw std::runtime_error{ "Illegal Dir enum member encountered" };
+}
+
+std::pair<int, int> Walker::unpackDir(Dir dir) {
+    if (dir == Dir::UP) return { 0, -1 };
+    if (dir == Dir::DOWN) return { 0, 1 };
+    if (dir == Dir::LEFT) return { -1, 0 };
+    if (dir == Dir::RIGHT) return { 1, 0 };
+    throw std::runtime_error{ "Illegal Dir enum member encountered" };
+}
+
+char Walker::dirToChar(Dir dir) {
+    if (dir == Dir::UP) return '^';
+    if (dir == Dir::RIGHT) return '>';
+    if (dir == Dir::DOWN) return 'v';
+    if (dir == Dir::LEFT) return '<';
+    throw std::runtime_error{ "Illegal Dir enum member encountered" };
+}
+
+size_t Walker::hash(size_t x, size_t y, Dir dir) {
+    // ...00XXXXXXXXYYYYYYYYDD
+    //      ^8      ^8      ^2
+    return (x << 10) | (y << 2) | static_cast<size_t>(dir);
+}
+
+World::World(std::string str, size_t width, size_t height) 
+        : data_(str), width(width), height(height), M_(std::mdspan(data_.data(), height, width))
+{
+    auto [x, y] = getStartPos();
+    walker_ = Walker{ x, y, Dir::UP, this };
+}
+
+char World::getChar(size_t x, size_t y) {
+    return M_[std::array{ y, x }];
+}
+
+void World::setChar(size_t x, size_t y, char c) {
+    M_[std::array{ y, x }] = c;
+}
+
+size_t World::getGuardPathLength() {
+    std::string str{ M_.data_handle() };
+    return rng::count_if(str, [](auto n) { return rng::any_of("^>v<"sv, [&n](auto m) { return n == m; }); });
+}
+
+std::pair<size_t, size_t> World::getStartPos() {
+    size_t pos = data_.find('^');
+    size_t W = M_.extents().extent(0);
+    size_t x = pos % W; // calling cols X, rows Y
+    size_t y = pos / W; // i.e. X horizontal, Y vertical
+    return { x, y };
+}
+
+void World::walkGuardPath() {
+    while (!walker_.step()) {}
+}
+
+std::pair<size_t, size_t> World::getSolution() {
+    std::string str{ M_.data_handle() };
+    walkGuardPath();
+    auto len = getGuardPathLength();
+    size_t count{};
+    for (const auto& p : walker_.path) {
+        World sub{ str, M_.extents().extent(0) , M_.extents().extent(1) };
+        sub.setChar(p.x, p.y, '#');
+        sub.walkGuardPath();
+        if (sub.walker_.looped) {
+            count++;
+            std::println("Found loop obstacle at ({}, {})", p.x, p.y);
+        }
+    }
+    return std::make_pair(len, count);
+}
+
+
 
 export std::string day6() {
     auto input = readFile("day6_input.txt");
@@ -134,12 +188,8 @@ export std::string day6() {
     auto height = withoutNewlines.size() / width;
 
     World world{ withoutNewlines, width, height };
-
-    auto posCount = world.walkAndReturnCount();
-    auto foo = world.toString();
-
-    auto dbgCount = world.doubleCheck();
+    auto [posCount, loopCount] = world.getSolution();
 
     return std::format("\nPart 1) guard visits {} distinct positions\
-                        \nPart 2) ???: {}\n", posCount, posCount);
+                        \nPart 2) found {} looping obstacle positions\n", posCount, loopCount);
 }
