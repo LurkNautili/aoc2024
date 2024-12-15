@@ -11,3 +11,9 @@ export namespace rng = std::ranges;
 export namespace vws = std::ranges::views;
 
 export using namespace std::literals;
+
+export int64_t toInteger(auto str) {
+    int64_t i;
+    std::from_chars(str.data(), str.data() + str.size(), i);
+    return i;
+}
