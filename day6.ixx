@@ -17,11 +17,11 @@ Dir rotateClockwise(Dir dir) {
     return static_cast<Dir>((static_cast<int>(dir) + 1) % 4);
 }
 
-struct Point {
+struct Pt {
     size_t x;
     size_t y;
 
-    auto operator<=>(const Point& o) const = default;
+    auto operator<=>(const Pt& o) const = default;
 };
 
 class World;
@@ -30,7 +30,7 @@ public:
     Walker(size_t x, size_t y, Dir dir, World* World);
     bool step();
     bool wallAhead(Dir dir);
-    std::set<Point> path;
+    std::set<Pt> path;
     bool looped{ false };
 private:
     std::pair<int, int> unpackDir(Dir dir);
@@ -84,7 +84,7 @@ bool Walker::step() {
     else {
         // unobstructed, update position, record visit
         world_->setChar(nextX, nextY, dirToChar(dir_));
-        path.insert(Point{ nextX, nextY });
+        path.insert(Pt{ nextX, nextY });
         x_ = nextX;
         y_ = nextY;
     }

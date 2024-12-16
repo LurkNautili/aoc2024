@@ -14,12 +14,19 @@ export namespace vws = std::ranges::views;
 
 export using namespace std::literals;
 
+
+export struct Point {
+    int x;
+    int y;
+
+    auto operator<=>(const Point&) const = default;
+};
+
 export int64_t toInteger(auto str) {
     int64_t i;
     std::from_chars(str.data(), str.data() + str.size(), i);
     return i;
 }
-
 
 export int64_t iPow(std::unsigned_integral auto base, std::unsigned_integral auto exp) {
     if (exp == 0u) return 1;
