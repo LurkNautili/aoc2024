@@ -2,7 +2,7 @@ export module day8;
 import dayBase;
 import <set>;
 import <unordered_map>;
-import <print>;
+import <numeric>;
 
 export std::string day8() {
     auto input = readFile("day8_input.txt");
@@ -25,27 +25,53 @@ export std::string day8() {
         return (0 <= p.x && p.x < width) && (0 <= p.y && p.y < height);
     };
 
-    std::set<Point> antipodes;
-    for (const auto& [k, v] : antennas) {
+    std::set<Point> antinodes1;
+    std::set<Point> antinodes2;
+    for (const auto& [c, v] : antennas) {
         for (auto [a, b] : vws::cartesian_product(v, v)) {
             if (a <= b) continue;
             int dx = a.x - b.x;
             int dy = a.y - b.y;
+            // Pt1
             auto ap1 = Point{ a.x + dx, a.y + dy };
             auto ap2 = Point{ b.x - dx, b.y - dy };
-            if (inBounds(ap1)) antipodes.insert(ap1);
-            if (inBounds(ap2)) antipodes.insert(ap2);
+            if (inBounds(ap1)) {
+                antinodes1.insert(ap1);
+            }
+            if (inBounds(ap2)) {
+                antinodes1.insert(ap2);
+            }
+
+            // Pt2
+            int gcd = std::gcd(dx, dy);
+            int mx = dx / gcd;
+            int my = dy / gcd;
+            int k{ 0 };
+            while (true) {
+                auto m1 = Point{ a.x + (k * mx), a.y + (k * my) };
+                if (inBounds(m1)) {
+                    antinodes2.insert(m1);
+                    k++;
+                }
+                else {
+                    k = 0;
+                    break;
+                }
+            }
+            while (true) {
+                auto m2 = Point{ b.x - (k * mx), b.y - (k * my) };
+                if (inBounds(m2)) {
+                    antinodes2.insert(m2);
+                    k++;
+                }
+                else {
+                    break;
+                }
+            }
+
         }
     }
 
-    std::string reconstruction;
-    for (auto& a : antipodes) {
-        trim[a.y * width + a.x] = '#';
-    }
-    for (auto s : (trim | vws::chunk(width) | rng::to<std::vector<std::string>>())) {
-        auto foo = std::string{ s };
-        reconstruction += (s + "\n");
-    }
-
-    return std::format("Part 1) antipode count: {}\n", antipodes.size());
+    return std::format("Part 1) antinode count: {}\nPart 2) antinode count: {}\n", 
+        antinodes1.size(), antinodes2.size());
 }
