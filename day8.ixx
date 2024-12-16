@@ -47,7 +47,6 @@ export std::string day8() {
             int gcd = std::gcd(dx, dy);
             int mx = dx / gcd;
             int my = dy / gcd;
-            int k{ 0 };
             auto addAntinodesOnRay = [&](auto p, auto d) {
                 rng::for_each(vws::iota(0) 
                     | vws::transform([&](auto i) { return Point{ p.x + (d * i * mx), p.y + (d * i * my) }; })
