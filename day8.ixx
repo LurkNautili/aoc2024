@@ -3,6 +3,7 @@ import dayBase;
 import <set>;
 import <unordered_map>;
 import <numeric>;
+import <algorithm>;
 
 export std::string day8() {
     auto input = readFile("day8_input.txt");
@@ -47,28 +48,15 @@ export std::string day8() {
             int mx = dx / gcd;
             int my = dy / gcd;
             int k{ 0 };
-            while (true) {
-                auto m1 = Point{ a.x + (k * mx), a.y + (k * my) };
-                if (inBounds(m1)) {
-                    antinodes2.insert(m1);
-                    k++;
-                }
-                else {
-                    k = 0;
-                    break;
-                }
-            }
-            while (true) {
-                auto m2 = Point{ b.x - (k * mx), b.y - (k * my) };
-                if (inBounds(m2)) {
-                    antinodes2.insert(m2);
-                    k++;
-                }
-                else {
-                    break;
-                }
-            }
-
+            auto addAntinodesOnRay = [&](auto p, auto d) {
+                rng::for_each(vws::iota(0) 
+                    | vws::transform([&](auto i) { return Point{ p.x + (d * i * mx), p.y + (d * i * my) }; })
+                    | vws::take_while([&](auto el) { return inBounds(el); }),
+                    [&](auto valid_point) { antinodes2.insert(valid_point);
+                });
+            };
+            addAntinodesOnRay(a, 1);
+            addAntinodesOnRay(b,-1);
         }
     }
 
