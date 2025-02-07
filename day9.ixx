@@ -72,36 +72,32 @@ export std::string day9() {
 
     // pt2
     while (!pt2todo.empty()) {
+        // grab the file block with the highest address and clear it from the queue
         auto b = pt2todo.back();
         pt2todo.pop_back();
+        // find first free block capable of holding b
+        // shrink the free block accordingly, possibly removing it
+        // the find_if gets the first free because the vector is sorted due to how it was created
+        // it remains sorted when a block shrinks within its own bounds
         if (auto ff = rng::find_if(pt2free, [&b](const auto& f) { return f.size >= b.size; }); 
             ff != pt2free.end() && ff->addr < b.addr)
         {
-            //auto tmpaddr = b.addr;
-            //auto tmpsize = b.size;
             b.addr = ff->addr;
             ff->size -= b.size;
             ff->addr += b.size;
             if (ff->size == 0) {
                 pt2free.erase(ff);
             }
-            //pt2free.emplace_back(tmpaddr, tmpsize, FREE);
-            //rng::sort(pt2free, [](const auto& a, const auto& b) { return a.addr < b.addr; });
-            // I think the fact that the blocks are sorted and only tried once in descending order
-            // means that we'll never get a chance to move into free spaces left behind by blocks moving left
-            // so I'll just omit this last part since I can't figure out how to do it quickly
         }
+        // add the processed blocks into done
+        // (even if they find no free space to move to; they all only get once chance)
         pt2done.push_back(b);
     }
 
-    rng::sort(pt2done, [](const auto& a, const auto& b) { return a.addr > b.addr; });
-
     size_t sum2{};
-    while (pt2done.size() > 0) {
-        auto back = pt2done.back();
-        pt2done.pop_back();
-        for (size_t i = 0ULL; i < back.size; ++i) {
-            sum2 += (back.addr + i) * back.id;
+    for (const auto& e : pt2done) {
+        for (size_t i = 0ULL; i < e.size; ++i) {
+            sum2 += (e.addr + i) * e.id;
         }
     }
 
